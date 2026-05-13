@@ -14,3 +14,19 @@ app = Flask(__name__, static_url_path='', static_folder='staticpages')
 @app.route('/')
 def index():
     return app.send_static_file('index.html')
+
+# curl http://127.0.0.1:5000/books
+@app.route('/books', methods=['GET'])
+def getall():
+    # gets all books and sends them back as json
+    results = bookdao.getAll()
+    return jsonify(results)
+ 
+# curl http://127.0.0.1:5000/books/1
+@app.route('/books/<int:id>', methods=['GET'])
+def findbyid(id):
+    book = bookdao.findByID(id)
+    if book:
+        return jsonify(book)
+    else:
+        abort(404) # book not found
