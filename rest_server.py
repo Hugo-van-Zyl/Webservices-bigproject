@@ -30,3 +30,40 @@ def findbyid(id):
         return jsonify(book)
     else:
         abort(404) # book not found
+
+ # curl -X POST -H "Content-Type:application/json" -d '{"title":"test","author":"me","price":10}' http://127.0.0.1:5000/books
+@app.route('/books', methods=['POST'])
+def create():
+    # the book data comes in as json in the body of the request
+    if not request.json:
+        abort(400) # bad request, no json sent
+    book = {
+        "title": request.json["title"],
+        "author": request.json["author"],
+        "price": request.json["price"]
+    }
+    result = bookdao.create(book)
+    return jsonify(result)
+ 
+# curl -X PUT -H "Content-Type:application/json" -d '{"title":"new title","author":"me","price":20}' http://127.0.0.1:5000/books/1
+@app.route('/books/<int:id>', methods=['PUT'])
+def update(id):
+    if not request.json:
+        abort(400)
+    book = {
+        "title": request.json["title"],
+        "author": request.json["author"],
+        "price": request.json["price"]
+    }
+    result = bookdao.update(id, book)
+    return jsonify(result)
+ 
+# curl -X DELETE http://127.0.0.1:5000/books/1
+@app.route('/books/<int:id>', methods=['DELETE'])
+def delete(id):
+    bookdao.delete(id)
+    return jsonify({"done": True})
+ 
+if __name__ == "__main__":
+    bookdao.init_db() # set up the table before we start
+    app.run(debug=True)
