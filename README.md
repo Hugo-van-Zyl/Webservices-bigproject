@@ -41,6 +41,7 @@ All of this is done through AJAX calls so the page doesnt reload every time.
 - `bookdao.py` - does all the database stuff (the DAO from the labs)
 - `staticpages/index.html` - the front end, uses bootstrap and ajax
 - `requirements.txt` - install packages
+- `Snippet of working Book manager.PNG` - snippet of book manager working
 
 ## References
 1. Lab 05.01 - Create a REST Server (Andrew Beatty)
