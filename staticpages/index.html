@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Book Manager</title>
+    
+    <!-- https://getbootstrap.com/docs/5.3/getting-started/introduction/ -->
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container mt-4">
+        <h1>Book Manager</h1>
+        <p>A simple web app for managing books. Uses AJAX to talk to the flask API.</p>
+
+        <button class="btn btn-primary mb-3" onclick="showCreateForm()">Add New Book</button>
+
+        <!-- form for adding or edit - shows when you click add or edit -->
+
+
+        <div id="bookForm" style="display:none;" class="card mb-3">
+            <div class="card-body">
+                <h5 id="formTitle">Add Book</h5>
+                <!-- no <form> tag, using ajax instead so page doesnt reload -->
+                <input type="hidden" id="bookId">
+                <div class="mb-2">
+                    <label for="title" class="form-label">Title:</label>
+                    <input type="text" class="form-control" id="title" placeholder="Enter book title">
+                </div>
+                <div class="mb-2">
+                    <label for="author" class="form-label">Author:</label>
+                    <input type="text" class="form-control" id="author" placeholder="Enter author name">
+                </div>
+                <div class="mb-2">
+                    <label for="price" class="form-label">Price (€):</label>
+                    <input type="number" class="form-control" id="price" step="0.01" placeholder="Enter price">
+                </div>
+                <button class="btn btn-success me-2" onclick="saveBook()">Save</button>
+                <button class="btn btn-secondary" onclick="hideForm()">Cancel</button>
+            </div>
+        </div>
+
+        <table class="table table-striped" id="bookTable">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Title</th>
+                    <th>Author</th>
+                    <th>Price (€)</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="bookTableBody">
+                <!-- filled in by javascript -->
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        
+    // ajax here - talks to the flask api without reloading the page
+    
+
+    window.onload = function() {
+        getAllBooks(); // load the table when page opens
+    };
+
+    // this gets all the books from the flask server and puts them in the table
+    function getAllBooks() {
+        // used XMLHttpRequest, got it from w3schools https://www.w3schools.com/js/js_ajax_intro.asp
+    // could probably use fetch() instead 
+        var xhr = new XMLHttpRequest();
+        // true means dont freeze page while waiting
+        xhr.open("GET", "/books", true);
+        xhr.onreadystatechange = function() {
+            // 4 = done, 200 = ok
+            if (xhr.readyState == 4 && xhr.status == 200) {
+                // responseText comes back as a string so need to parse i t
+                var books = JSON.parse(xhr.responseText);
+                displayBooks(books);
+            }
+        };
+        xhr.send();
+    }
+
+    
+    function displayBooks(books) { // takes the books array and builds the table rows from it
+        var tableBody = document.getElementById("bookTableBody");
+        tableBody.innerHTML = ""; // clear it first otherwise rows just keep getting added
+
+        for (var i = 0; i < books.length; i++) {
+            var row = tableBody.insertRow(); // new row in the table
+            row.insertCell(0).innerHTML = books[i].id;
+            row.insertCell(1).innerHTML = books[i].title;
+            row.insertCell(2).innerHTML = books[i].author;
+            row.insertCell(3).innerHTML = parseFloat(books[i].price).toFixed(2); // so it shows like 10.00 not 10
+            // the edit and delete buttons for each row
+            // i had to pass the id into onclick so it knows which book were talking about
+            row.insertCell(4).innerHTML = 
+                '<button class="btn btn-sm btn-warning me-1" onclick="showEditForm(' + books[i].id + ')">Edit</button>' +
+                '<button class="btn btn-sm btn-danger" onclick="deleteBook(' + books[i].id + ')">Delete</button>';
+        }
+    }
+
+    
+    function showCreateForm() { // shows the form with empty fields for adding a new book
+        document.getElementById("formTitle").innerHTML = "Add Book";
+        document.getElementById("bookId").value = ""; // blank cos its new
+        document.getElementById("title").value = "";
+        document.getElementById("author").value = "";
+        document.getElementById("price").value = "";
+        document.getElementById("bookForm").style.display = "block"; // makes it visible
+    }
+
+    // shows the form but filled in with the books current info
+    function showEditForm(id) {
+        
+        var xhr = new XMLHttpRequest(); // need to get the book from server first
+        xhr.open("GET", "/books/" + id, true);
+        xhr.onreadystatechange = function() {
+            if (xhr.readyState == 4 && xhr.status == 200) {
+                var book = JSON.parse(xhr.responseText);
+                document.getElementById("formTitle").innerHTML = "Edit Book";
+                // put the existing values into the form
+                document.getElementById("bookId").value = book.id;
+                document.getElementById("title").value = book.title;
+                document.getElementById("author").value = book.author;
+                document.getElementById("price").value = book.price;
+                document.getElementById("bookForm").style.display = "block";
+            }
+        };
+        xhr.send();
+    }
+
+    function hideForm() {
+        document.getElementById("bookForm").style.display = "none";
+    }
+
+    
+    function saveBook() { // this does both create and update depending on if theres an id
+        var id = document.getElementById("bookId").value;
+
+        
+        var book = { // get whats in the form fields
+            "title": document.getElementById("title").value,
+            "author": document.getElementById("author").value,
+            "price": parseFloat(document.getElementById("price").value) // needs to be a number not string
+        };
+
+        var xhr = new XMLHttpRequest();
+        if (id) {
+            
+            xhr.open("PUT", "/books/" + id, true); // editing so use PUT
+        } else {
+            
+            xhr.open("POST", "/books", true); // new book so use POST
+        }
+        
+        xhr.setRequestHeader("Content-Type", "application/json"); // need this header or flask wont recognise it as json
+        xhr.onreadystatechange = function() {
+            if (xhr.readyState == 4 && (xhr.status == 200)) {
+                hideForm();
+                getAllBooks(); // refresh the table
+            }
+        };
+        
+        xhr.send(JSON.stringify(book)); // have to turn the object into a json string before sending it
+    }
+
+    
+    function deleteBook(id) { // deletes a book, but asks first with a confirm box
+        if (!confirm("Are you sure you want to delete this book?")) {
+            return; // they said no
+        }
+        var xhr = new XMLHttpRequest();
+        xhr.open("DELETE", "/books/" + id, true);
+        xhr.onreadystatechange = function() {
+            if (xhr.readyState == 4 && xhr.status == 200) {
+                getAllBooks(); // refresh
+            }
+        };
+        xhr.send();
+    }
+    </script>
+</body>
+</html>
